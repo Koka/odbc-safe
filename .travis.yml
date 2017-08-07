@@ -19,6 +19,10 @@ addons:
      - libsqliteodbc
 services:
  - postgresql
+install:
+ - if [ $TRAVIS_OS_NAME = osx ]; then export PG_DATA=$(brew --prefix)/var/postgres;  fi
+ - if [ $TRAVIS_OS_NAME = osx ]; then export pg_ctl -w start - postgres.log --pgdata ${PG_DATA};  fi
+ - if [ $TRAVIS_OS_NAME = osx ]; then createuser -s postgres;  fi
 before_script:
  - psql -c 'create database travis_ci_test;' -U postgres
  - export ODBCINI=${PWD}/travis/odbc.ini
