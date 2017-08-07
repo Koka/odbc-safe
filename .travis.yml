@@ -10,6 +10,8 @@ os:
 matrix:
   allow_failures:
    - rust: nightly
+  exclude:
+   - osx: nightly
 addons:
   apt:
     packages:
