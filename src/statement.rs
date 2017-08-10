@@ -76,6 +76,48 @@ impl<'con> Statement<'con, NoResult> {
     }
 }
 
+impl<'con, HasResult> Statement<'con, HasResult> {
+    /// Returns the number of columns of the result set
+    ///
+    /// See [SQLNumResultCols][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
+    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
+        self.handle.num_result_cols()
+    }
+
+    /// Advances Cursor to next row
+    ///
+    /// See [SQLFetch][1]
+    /// See [Fetching a Row of Data][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
+    pub fn fetch(mut self) -> ReturnNoData<Self, Statement<'con, NoResult>> {
+        match self.handle.fetch() {
+            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
+            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
+            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
+            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
+        }
+    }
+
+
+    /// Retrieves data for a single column or output parameter.
+    ///
+    /// See [SQLGetData][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlgetdata-function
+    pub fn get_data<T>(
+        &mut self,
+        col_or_param_num: SQLUSMALLINT,
+        target: &mut T,
+    ) -> ReturnNoData<Indicator>
+    where
+        T: Target + ?Sized,
+    {
+        // TODO: verify at compile time, that it is called after fetch
+        self.handle.get_data(col_or_param_num, target)
+    }
+}
+
 impl<'con, C> Diagnostics for Statement<'con, C> {
     fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
         self.handle.diagnostics(rec_number, message_text)

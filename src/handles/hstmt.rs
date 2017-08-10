@@ -46,8 +46,8 @@ impl<'env> HStmt<'env> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
-                .into();
+            let result: Return<()> =
+                SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
             result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
         }
     }
@@ -63,5 +63,38 @@ impl<'env> HStmt<'env> {
                 statement_text.text_length_int(),
             ).into()
         }
+    }
+
+    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
+        let mut out: SQLSMALLINT = 0;
+        let ret = unsafe { SQLNumResultCols(self.handle, &mut out) };
+        let ret: Return<()> = ret.into();
+        ret.map(|()| out)
+    }
+
+    pub fn fetch(&mut self) -> ReturnNoData<()> {
+        unsafe { SQLFetch(self.handle).into() }
+    }
+
+    pub fn get_data<T>(
+        &mut self,
+        col_or_param_num: SQLUSMALLINT,
+        target: &mut T,
+    ) -> ReturnNoData<Indicator>
+    where
+        T: Target + ?Sized,
+    {
+        let mut str_len_or_ind = 0;
+        let ret: ReturnNoData<()> = unsafe {
+            SQLGetData(
+                self.handle,
+                col_or_param_num,
+                T::c_data_type(),
+                target.value_ptr(),
+                target.buffer_len(),
+                &mut str_len_or_ind,
+            ).into()
+        };
+        ret.map(|()| str_len_or_ind.into())
     }
 }
